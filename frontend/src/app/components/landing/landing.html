@@ -1,0 +1,21 @@
+<div class="landing-container">
+  <div class="landing-card">
+    <h1>Welcome to Tic-Tac-Toe Arena</h1>
+    <p class="lead">Choose a mode to get started</p>
+
+    <div class="mode-options">
+      <label class="mode-label">
+        <input type="radio" name="mode" [(ngModel)]="selectedMode" value="TwoPlayer" />
+        <span class="mode-text">👥 Play with Friend</span>
+      </label>
+      <label class="mode-label">
+        <input type="radio" name="mode" [(ngModel)]="selectedMode" value="AgainstComputer" />
+        <span class="mode-text">🤖 Play with Computer</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" (click)="start()">Start Game</button>
+    </div>
+  </div>
+</div>

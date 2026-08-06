@@ -1,28 +1,64 @@
-# Tic-Tac-Toe Arena (Full-Stack Real-Time Architecture)
+# Tic-Tac-Toe Arena
 
-A professional Monorepo-based Tic-Tac-Toe application engineered with **Angular**, **.NET Core Web API**, and **SQLite**, featuring real-time state synchronization powered by **ASP.NET Core SignalR**.
+A full-stack Tic Tac Toe application built for the ABB interview problem statement. It uses an Angular frontend and a .NET Web API backend, with the backend acting as the source of truth for gameplay, move history, scoreboard, and outcome validation.
 
-## 🏗️ Architectural Strategy & Design Patterns
-*   **State Machine Management:** All evaluation matrices, move calculations, and board conditions are determined strictly on the server side to maintain a single source of truth and prevent client-side data tampering.
-*   **Persistent Historical Audit (Undo/Redo):** Moves are logged sequentially in an SQLite table. This provides a clean audit log and allows for precise rollback mechanics.
-*   **Real-time Communication:** Built using **SignalR Hubs** instead of raw WebSockets. This architectural choice provides built-in reconnection management, protocol fallbacks, and connection grouping out of the box.
-*   **Scoreboard Ruleset (Option A):** Once a match finishes (Victory or Stalemate), the grid locks, points update permanently, and the Undo feature is disabled to preserve match integrity.
+## Features implemented
+- Two-player gameplay
+- Basic computer opponent mode
+- Move history with row/column positions
+- Undo support for the selected mode
+- Scoreboard tracking for X wins, O wins, and draws
+- Reset game and reset scoreboard actions
+- Server-side win, draw, and computer-move rules
+- Simple SignalR-based state updates for the UI
 
-## 🤖 GitHub Copilot Development Runbook
-This project was systematically generated using a **Dual-Mode System Engine Paradigm**:
-1.  **Agent Mode (`@workspace /agent`):** Used to choreograph multi-file structural edits, establish infrastructure pipelines, and build out the SignalR connection matrix across the project directories.
-2.  **Ask Mode (`/chat`):** Used to isolate specific business logic, create the database entity configurations, and implement the row/column win-checking algorithms.
+## Tech stack
+- Frontend: Angular + TypeScript
+- Backend: ASP.NET Core Web API
+- Storage: SQLite via Entity Framework Core
+- Tests: xUnit for backend rules
 
-## 🚀 Local Run Instructions
-### Backend Setup
+## Run locally
+### Backend
 ```bash
 cd backend/TicTacToe.Api
 dotnet run --urls=http://localhost:5000
 ```
 
-### Frontend Setup
+### Frontend
 ```bash
 cd frontend
 npm install
-ng serve --port 4200
+npm start
 ```
+
+The Angular app expects the API at http://localhost:5000.
+
+## API summary
+- POST /api/games – create a new game session
+- GET /api/games/{id} – fetch current state
+- POST /api/games/{id}/moves – submit a move using a body such as { "cellIndex": 4 }
+- POST /api/games/{id}/undo – undo the last move
+- POST /api/games/{id}/reset – reset the current board
+- GET /api/scoreboard – read scoreboard values
+- POST /api/scoreboard/reset – reset scoreboard values
+
+## Tests
+```bash
+cd backend
+dotnet test TicTacToe.Tests/TicTacToe.Tests.csproj
+```
+
+## AI workflow notes
+- The solution was built with a structured prompt-driven workflow: first the problem statement and requirements, then the backend rules and persistence layer, then the frontend UI and API integration.
+- The core rules were reviewed and tested explicitly to keep the explanation simple and robust.
+
+## Design decisions
+- Backend owns the game rules and state to keep the experience consistent and auditable.
+- Scoreboard behavior follows Option A: once a game is completed, undo is disabled and the scoreboard remains final for that game.
+- The computer opponent uses a lightweight rule-based strategy: win, block, center, corner, then fallback.
+
+## Assumptions and limitations
+- The solution uses in-memory-style backend persistence through SQLite for local demo purposes.
+- The computer mode is intentionally simple and deterministic.
+- There is no authentication or multi-user persistence beyond the local demo setup.

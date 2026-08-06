@@ -1,0 +1,146 @@
+<div class="app-layout">
+  <header class="game-header">
+    <h1>Tic-Tac-Toe Arena</h1>
+    <div class="mode-selector" *ngIf="!state">
+      <button [class.active]="activeMode === 'TwoPlayer'" [disabled]="isBusy" (click)="initializeNewMatch('TwoPlayer')">
+        👥 Versus Friend
+      </button>
+      <button [class.active]="activeMode === 'AgainstComputer'" [disabled]="isBusy" (click)="initializeNewMatch('AgainstComputer')">
+        🤖 Versus Computer
+      </button>
+    </div>
+    <div class="mode-summary" *ngIf="state">
+      <span class="current-mode">Mode: {{ state.gameMode === 'AgainstComputer' ? 'Versus Computer' : 'Versus Friend' }}</span>
+      <button class="btn btn-secondary" [disabled]="isBusy" (click)="openChangeModeDialog()">Change Mode</button>
+    </div>
+  </header>
+
+  <!-- Start screen shown before a session is created -->
+  <div *ngIf="isLoading" class="busy-overlay">
+    <div class="spinner" aria-hidden="true"></div>
+  </div>
+  <div *ngIf="!state" class="start-screen">
+    <div class="start-card">
+      <h2>Select Mode</h2>
+      <div class="mode-options">
+        <label class="mode-label">
+          <input class="radio-input" type="radio" name="mode" [checked]="activeMode === 'TwoPlayer'" (change)="initializeNewMatch('TwoPlayer')">
+          <span class="mode-text">👥 Play with Friend</span>
+        </label>
+        <label class="mode-label">
+          <input class="radio-input" type="radio" name="mode" [checked]="activeMode === 'AgainstComputer'" (change)="initializeNewMatch('AgainstComputer')">
+          <span class="mode-text">🤖 Play with Computer</span>
+        </label>
+      </div>
+      <button class="btn btn-primary btn-start-large" (click)="startGame()">Start Game</button>
+    </div>
+  </div>
+
+  <!-- Win / Loss Popup -->
+  <div class="result-overlay" *ngIf="state && state.gameStatus !== 'InProgress'">
+    <div class="result-card" [class.win]="state.gameStatus === 'Won'" [class.draw]="state.gameStatus === 'Draw'">
+      <h2 *ngIf="state.gameStatus === 'Won'">🎉 {{ state.winner }} Wins!</h2>
+      <h2 *ngIf="state.gameStatus === 'Draw'">🤝 It's a Draw!</h2>
+      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'O'">Oh no — the computer won. Try again?</p>
+      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'X'">Great job — you beat the computer!</p>
+      <button class="btn" (click)="resetBoard()">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Change Mode Dialog -->
+  <div class="dialog-overlay" *ngIf="showChangeDialog">
+    <div class="dialog-card">
+      <h3>Change Game Mode</h3>
+      <p>Choose the new mode to start a fresh match.</p>
+      <div class="dialog-actions">
+        <button class="btn" (click)="changeModeTo(state?.gameMode === 'AgainstComputer' ? 'TwoPlayer' : 'AgainstComputer')">
+          {{ state?.gameMode === 'AgainstComputer' ? '👥 Versus Friend' : '🤖 Versus Computer' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelChangeMode()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="dashboard-grid">
+    <section class="card widget-scoreboard">
+      <h2>Scoreboard</h2>
+      <div class="score-row">
+        <div class="score-block player-x">
+          <span class="lbl">Player X</span>
+          <span class="val">{{ state?.scoreboard?.xWins ?? 0 }}</span>
+        </div>
+        <div class="score-block draw-game">
+          <span class="lbl">Draws</span>
+          <span class="val">{{ state?.scoreboard?.draws ?? 0 }}</span>
+        </div>
+        <div class="score-block player-o">
+          <span class="lbl">Player O</span>
+          <span class="val">{{ state?.scoreboard?.oWins ?? 0 }}</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary" (click)="purgeScoreboard()">Reset Scoreboard</button>
+    </section>
+
+    <section class="core-stage">
+      <div class="status-banner" *ngIf="state">
+        <span *ngIf="state.gameStatus === 'InProgress'">
+          Turn:
+          <span class="turn-pill" [ngClass]="state.currentPlayer?.toLowerCase()">{{ state.currentPlayer }}</span>
+        </span>
+        <span *ngIf="state.gameStatus === 'Won'" class="win-banner">
+          Winner: <strong>{{ state.winner }}</strong> 🎉
+        </span>
+        <span *ngIf="state.gameStatus === 'Draw'" class="draw-banner">
+          Draw! No winner this round. 🤝
+        </span>
+      </div>
+
+      <div class="tic-grid" [class.disabled]="isBusy">
+        <div
+          *ngFor="let cell of cells; let idx = index"
+          class="grid-cell"
+          [class.locked]="cell !== '-' || state?.gameStatus !== 'InProgress'"
+          [class.winning]="isWinningCell(idx)"
+          (click)="onCellClick(idx)"
+          (dblclick)="$event.preventDefault()">
+          <span class="marker-text" *ngIf="cell !== '-'" [attr.data-player]="cell">{{ cell }}</span>
+        </div>
+      </div>
+
+      <div class="action-dock">
+        <button class="btn btn-primary" [disabled]="isBusy" (click)="resetBoard()">Reset Game</button>
+        <button
+          class="btn btn-warn"
+          [disabled]="!state || isBusy || state.moveHistory.length === 0 || state.gameStatus !== 'InProgress'"
+          (click)="executeUndo()">
+          Undo Move
+        </button>
+      </div>
+    </section>
+
+    <section class="card widget-history">
+      <h2>Move History</h2>
+      <div class="table-scroll-container">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Position</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let step of state?.moveHistory">
+              <td>{{ step.moveNumber }}</td>
+              <td><span class="badge" [attr.data-p]="step.player">{{ step.player }}</span></td>
+              <td>{{ step.position }}</td>
+            </tr>
+            <tr *ngIf="!state?.moveHistory?.length">
+              <td colspan="3" class="empty-state">Waiting for the first move...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>

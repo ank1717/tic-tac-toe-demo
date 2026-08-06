@@ -1,0 +1,9 @@
+/* You can add global styles to this file, and also import other style files */body {
+  margin: 0;
+  padding: 0;
+  background-color: #0f172a; /* Deep slate professional dark theme background */
+  color: #f8fafc;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+
