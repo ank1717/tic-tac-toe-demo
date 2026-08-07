@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { GameStateResponse } from '../../models/game.model';
 import { GameService } from '../../services/game';
@@ -17,7 +17,8 @@ export class GameBoardComponent implements OnInit {
   cells: string[] = Array(9).fill('-');
   activeMode = 'TwoPlayer';
   isBusy = false;
-  isLoading = false;
+  autoStarting = false;
+  showResult = false;
   showChangeDialog = false;
   private lastClickAt = 0;
 
@@ -25,18 +26,19 @@ export class GameBoardComponent implements OnInit {
     private gameService: GameService,
     private liveStream: LiveStreamService,
     private cdr: ChangeDetectorRef,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.liveStream.initializeSocketStream();
 
-    // Read optional mode from query param and auto-start when present
     const modeFromQuery = this.route.snapshot.queryParamMap.get('mode');
     if (modeFromQuery) {
-      this.initializeNewMatch(modeFromQuery);
-      // start a short tick to let change detection update before creating session
-      setTimeout(() => this.startGame(), 50);
+      this.autoStarting = true;
+      this.activeMode = modeFromQuery;
+      this.isBusy = true;
+      this.startGame();
     }
 
     this.liveStream.listenToStateStream().subscribe({
@@ -47,7 +49,7 @@ export class GameBoardComponent implements OnInit {
     });
 
     // Start in a mode selection state; require user to click Start to begin when no query param present
-    if (!this.state) this.initializeNewMatch(this.activeMode);
+    if (!this.state && !modeFromQuery) this.initializeNewMatch(this.activeMode);
   }
 
   initializeNewMatch(mode: string): void {
@@ -56,21 +58,25 @@ export class GameBoardComponent implements OnInit {
     this.isBusy = false;
   }
 
+  goHome(): void {
+    this.router.navigate(['/']);
+  }
+
   startGame(): void {
     this.isBusy = true;
-    this.isLoading = true;
+    this.showResult = false;
     this.gameService.createNewSession(this.activeMode).subscribe({
       next: (res) => {
         this.liveStream.bindToSessionGroup(res.gameId);
         this.applyState(res);
+        this.autoStarting = false;
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error starting game session:', err);
+        this.autoStarting = false;
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
@@ -88,20 +94,18 @@ export class GameBoardComponent implements OnInit {
     this.showChangeDialog = false;
     this.activeMode = mode;
     this.isBusy = true;
-    this.isLoading = true;
+    this.showResult = false;
     // Create a new session with the selected mode (ends current match view)
     this.gameService.createNewSession(this.activeMode).subscribe({
       next: (res) => {
         this.liveStream.bindToSessionGroup(res.gameId);
         this.applyState(res);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error changing mode:', err);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
@@ -142,18 +146,15 @@ export class GameBoardComponent implements OnInit {
     }
 
     this.isBusy = true;
-    this.isLoading = true;
     this.gameService.triggerUndo(this.state.gameId).subscribe({
       next: (res) => {
         this.applyState(res);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error undoing move:', err);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
@@ -163,18 +164,15 @@ export class GameBoardComponent implements OnInit {
     if (!this.state || this.isBusy) return;
 
     this.isBusy = true;
-    this.isLoading = true;
     this.gameService.resetCurrentBoard(this.state.gameId).subscribe({
       next: (res) => {
         this.applyState(res);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error resetting game:', err);
         this.isBusy = false;
-        this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
@@ -197,5 +195,13 @@ export class GameBoardComponent implements OnInit {
   private applyState(nextState: GameStateResponse): void {
     this.state = nextState;
     this.cells = Array.from(nextState.boardState);
+    if (nextState.gameStatus !== 'InProgress') {
+      setTimeout(() => {
+        this.showResult = true;
+        this.cdr.detectChanges();
+      }, 1200);
+    } else {
+      this.showResult = false;
+    }
   }
 }

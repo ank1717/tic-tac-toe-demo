@@ -23,7 +23,7 @@ export class LiveStreamService {
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('http://localhost:5000/hub/game', {
         skipNegotiation: false, // Fallback gracefully if WebSockets are blocked by proxies
-        transport: signalR.HttpTransportType.WebSockets
+        transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling
       })
       .withAutomaticReconnect({
         // Enterprise retry matrix (0s, 2s, 10s, 30s delays)

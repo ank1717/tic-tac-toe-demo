@@ -85,18 +85,6 @@ namespace TicTacToe.Api.Controllers
                     EvaluateMatchEnding(session, board, 'O');
                 }
             }
-            if (session.Mode == GameMode.AgainstComputer && session.Status == GameStatus.InProgress)
-            {
-                // Add a slight delay so the UI can show the human move before the computer responds
-                await Task.Delay(600);
-                var computerMoveIndex = _rules.CalculateComputerMove(board);
-                if (computerMoveIndex != -1)
-                {
-                    ExecuteMoveOnSession(session, computerMoveIndex, 'O');
-                    board[computerMoveIndex] = 'O';
-                    EvaluateMatchEnding(session, board, 'O');
-                }
-            }
 
             await _context.SaveChangesAsync();
             return await BroadcastStateAsync(id);
@@ -110,18 +98,28 @@ namespace TicTacToe.Api.Controllers
             if (session.Status != GameStatus.InProgress) return BadRequest("Undo is disabled once the match completes.");
             if (!session.Moves.Any()) return BadRequest("No historical actions logged yet.");
 
-            if (session.Mode == GameMode.TwoPlayer)
+            var currentMoves = session.Moves.OrderBy(m => m.MoveNumber).ToList();
+            var movesToRemove = session.Mode == GameMode.TwoPlayer
+                ? currentMoves.TakeLast(1).ToList()
+                : currentMoves.TakeLast(Math.Min(2, currentMoves.Count)).ToList();
+
+            foreach (var move in movesToRemove)
             {
-                var lastMove = session.Moves.OrderByDescending(m => m.MoveNumber).First();
-                _context.MoveLogs.Remove(lastMove);
-                session.CurrentTurn = lastMove.Player;
+                _context.MoveLogs.Remove(move);
             }
-            else
+
+            var remainingMoves = currentMoves.Except(movesToRemove).OrderBy(m => m.MoveNumber).ToList();
+            for (var i = 0; i < remainingMoves.Count; i++)
             {
-                var targetingMoves = session.Moves.OrderByDescending(m => m.MoveNumber).Take(2).ToList();
-                foreach (var move in targetingMoves) _context.MoveLogs.Remove(move);
-                session.CurrentTurn = 'X';
+                remainingMoves[i].MoveNumber = i + 1;
             }
+
+            session.CurrentTurn = remainingMoves.Any()
+                ? (remainingMoves.Last().Player == 'X' ? 'O' : 'X')
+                : 'X';
+            session.Status = GameStatus.InProgress;
+            session.Winner = null;
+            session.WinningCells = string.Empty;
 
             await _context.SaveChangesAsync();
             return await BroadcastStateAsync(id);

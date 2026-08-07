@@ -23,7 +23,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("LocalDev", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.SetIsOriginAllowed(origin =>
+            origin == "http://localhost:4200" || origin == "http://127.0.0.1:4200")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // Crucial configuration mapping requirement for SignalR handshakes
@@ -46,8 +47,8 @@ app.UseRouting();
 app.UseCors("LocalDev");
 app.UseAuthorization();
 
-// 8. Map controllers and require the same CORS policy for the SignalR hub
-app.MapControllers();
+// 8. Map controllers and require the same CORS policy for the application endpoints
+app.MapControllers().RequireCors("LocalDev");
 app.MapHub<TicTacToe.Api.Hubs.GameHub>("/hub/game").RequireCors("LocalDev");
 
 app.Run();

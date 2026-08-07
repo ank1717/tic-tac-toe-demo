@@ -1,7 +1,7 @@
-<div class="app-layout">
+<div class="app-layout" *ngIf="!autoStarting || state">
   <header class="game-header">
     <h1>Tic-Tac-Toe Arena</h1>
-    <div class="mode-selector" *ngIf="!state">
+    <div class="mode-selector" *ngIf="!state && !autoStarting">
       <button [class.active]="activeMode === 'TwoPlayer'" [disabled]="isBusy" (click)="initializeNewMatch('TwoPlayer')">
         👥 Versus Friend
       </button>
@@ -12,14 +12,12 @@
     <div class="mode-summary" *ngIf="state">
       <span class="current-mode">Mode: {{ state.gameMode === 'AgainstComputer' ? 'Versus Computer' : 'Versus Friend' }}</span>
       <button class="btn btn-secondary" [disabled]="isBusy" (click)="openChangeModeDialog()">Change Mode</button>
+      <button class="btn btn-secondary" (click)="goHome()">Home</button>
     </div>
   </header>
 
   <!-- Start screen shown before a session is created -->
-  <div *ngIf="isLoading" class="busy-overlay">
-    <div class="spinner" aria-hidden="true"></div>
-  </div>
-  <div *ngIf="!state" class="start-screen">
+  <div *ngIf="!state && !autoStarting" class="start-screen">
     <div class="start-card">
       <h2>Select Mode</h2>
       <div class="mode-options">
@@ -36,13 +34,13 @@
     </div>
   </div>
 
-  <!-- Win / Loss Popup -->
-  <div class="result-overlay" *ngIf="state && state.gameStatus !== 'InProgress'">
+  <!-- Win / Loss Popup –– shown after short delay so winning cells are visible -->
+  <div class="result-overlay" *ngIf="showResult && state && state.gameStatus !== 'InProgress'">
     <div class="result-card" [class.win]="state.gameStatus === 'Won'" [class.draw]="state.gameStatus === 'Draw'">
       <h2 *ngIf="state.gameStatus === 'Won'">🎉 {{ state.winner }} Wins!</h2>
       <h2 *ngIf="state.gameStatus === 'Draw'">🤝 It's a Draw!</h2>
-      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'O'">Oh no — the computer won. Try again?</p>
-      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'X'">Great job — you beat the computer!</p>
+      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'O'">Oh no, the computer won. Try again?</p>
+      <p *ngIf="state.gameMode === 'AgainstComputer' && state.winner === 'X'">Great job, you beat the computer!</p>
       <button class="btn" (click)="resetBoard()">Play Again</button>
     </div>
   </div>
@@ -78,14 +76,16 @@
           <span class="val">{{ state?.scoreboard?.oWins ?? 0 }}</span>
         </div>
       </div>
-      <button class="btn btn-secondary" (click)="purgeScoreboard()">Reset Scoreboard</button>
+      <div style="text-align:center">
+        <button class="btn btn-secondary" (click)="purgeScoreboard()">Reset Scoreboard</button>
+      </div>
     </section>
 
     <section class="core-stage">
       <div class="status-banner" *ngIf="state">
         <span *ngIf="state.gameStatus === 'InProgress'">
           Turn:
-          <span class="turn-pill" [ngClass]="state.currentPlayer?.toLowerCase()">{{ state.currentPlayer }}</span>
+          <span class="turn-pill" [ngClass]="state.currentPlayer.toLowerCase()">{{ state.currentPlayer }}</span>
         </span>
         <span *ngIf="state.gameStatus === 'Won'" class="win-banner">
           Winner: <strong>{{ state.winner }}</strong> 🎉
@@ -108,7 +108,7 @@
       </div>
 
       <div class="action-dock">
-        <button class="btn btn-primary" [disabled]="isBusy" (click)="resetBoard()">Reset Game</button>
+        <button class="btn btn-reset-game" [disabled]="isBusy" (click)="resetBoard()">Reset Game</button>
         <button
           class="btn btn-warn"
           [disabled]="!state || isBusy || state.moveHistory.length === 0 || state.gameStatus !== 'InProgress'"
