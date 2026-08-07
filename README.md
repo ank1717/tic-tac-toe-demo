@@ -1,6 +1,6 @@
 # Tic-Tac-Toe Arena
 
-A full-stack Tic Tac Toe application built for the ABB interview problem statement. It uses an Angular frontend and a .NET Web API backend, with the backend acting as the source of truth for gameplay, move history, scoreboard, and outcome validation.
+A full-stack 3*3 Tic Tac Toe application supporting 2 players and computer mode. It uses an Angular frontend and a .NET Web API backend, with the backend acting as the source of truth for gameplay, move history, scoreboard, and outcome validation.
 
 ## Features
 
