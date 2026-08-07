@@ -218,9 +218,73 @@ That page shows the Jasmine test runner with a live list of every spec — green
 
 ---
 
-## Design Decisions
+## 8. AI Tools and Prompt Summary
 
-- **Backend owns the rules.** All win/draw/computer-move logic lives in the API to keep the frontend purely presentational.
-- **Scoreboard is final once a game ends.** Undo is disabled after a game completes; the score is not reversed.
-- **Computer strategy** follows: win → block → center → corner → fallback.
-- **SQLite** is used for local demo persistence. No external database setup is needed.
+This project was built through iterative prompting, discussion, and manual engineering decisions.
+
+### Prompt themes used during development
+
+- Define architecture and responsibility split between frontend and backend.
+- Generate endpoint skeletons and data contracts for game and scoreboard operations.
+- Draft and refine game-rule logic for win, draw, undo, and computer mode.
+- Improve frontend interaction flow for reload behavior, result timing, and control states.
+- Iterate CSS multiple times to improve readability, spacing, contrast, and responsive behavior.
+- Diagnose and fix test setup issues across backend and frontend suites.
+
+### What was drafted vs what was manually finalized
+
+- Drafted through prompting:
+  - Initial architecture and project structure direction.
+  - Candidate controller/service/test scaffolds.
+  - First-pass UI and styling structure.
+- Finalized manually:
+  - Exact rule behavior and edge-case handling.
+  - Route/reload state flow and UX timing decisions.
+  - Final CSS values and layout tuning.
+  - Test expectation updates and cleanup actions.
+
+### Review focus applied before finalizing
+
+- Winner/draw correctness across board states.
+- Computer move priority behavior (win, block, center, corner, fallback).
+- Undo behavior differences by mode.
+- Scoreboard update/reset behavior.
+- Realtime synchronization stability and reload consistency.
+
+## 9. Design Decisions
+
+- **Backend owns all game rules.** Win/draw/computer logic is server-side so all clients share one source of truth.
+- **SignalR + REST hybrid model.** REST is used for commands and fetches; SignalR pushes state changes immediately.
+- **Rules engine separation.** Core move and outcome logic lives in a service to keep controllers focused on orchestration and persistence.
+- **Mode-aware undo behavior.** Two-player removes one move; computer mode removes the last player+computer turn pair.
+- **Scoreboard as outcome history.** Counters are updated only at terminal game states; reset is explicit via dedicated endpoint.
+- **SQLite for portability.** Local development and demo evaluation can run without external database dependencies.
+
+## 10. Clarifications and Assumptions
+
+- The board is fixed at 3x3.
+- Symbols are `X` and `O`, with `X` as the starting player.
+- Computer mode uses deterministic priority strategy, not deep search.
+- The backend is authoritative for move validity and game outcomes.
+- The same local scoreboard is shared for all sessions in this demo.
+- Undo is intended for in-progress games; behavior after terminal state follows current backend rules.
+- Local development URLs are assumed as `http://localhost:5000` (backend) and `http://localhost:4200` (frontend).
+
+## 11. Known Limitations
+
+- No authentication or user identity; scoreboard is not user-specific.
+- No matchmaking/room lifecycle management for production multiplayer.
+- Computer strategy is strong enough for demo use but not unbeatable.
+- No distributed cache or horizontal scaling strategy for realtime state.
+- Limited persistence/reporting views beyond current API and in-app tables.
+- Test coverage is focused on core logic and service behavior, not full end-to-end browser flows.
+
+## 12. Future Improvements
+
+- Add player profiles and authenticated, user-scoped scoreboards.
+- Add room management with invite/join codes and spectator support.
+- Introduce multiple difficulty levels (heuristic + minimax option).
+- Add stronger reconnect/session-resume handling for realtime gameplay.
+- Add richer analytics (win rates, move heatmaps, streak tracking).
+- Add containerized deployment manifests and CI/CD pipelines.
+- Expand automated testing with integration and end-to-end suites.
