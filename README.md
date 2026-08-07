@@ -171,6 +171,8 @@ Open your browser at **http://localhost:4200** to play.
 | `GET`  | `/api/scoreboard` | Read scoreboard |
 | `POST` | `/api/scoreboard/reset` | Reset scoreboard |
 
+Detailed endpoint docs with request/response payloads, status codes, and SignalR contracts are available in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
 ---
 
 ## Running Tests
