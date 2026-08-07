@@ -1,254 +1,206 @@
-# Tic-Tac-Toe Development Prompt Journal
+# Tic-Tac-Toe Development Prompt Trail
 
-This file captures the kind of prompts and conversations we used while building the project end to end.
-It is written in simple language and follows the real path: architecture decisions, logic discussions, realtime updates, testing, and the CSS iterations.
+This document captures how the work was actually guided from problem statement to final implementation, using practical prompts, follow-up questions, and technical discussions during coding.
 
-## Prompt Conversation (From Scratch)
+## Problem Statement at Start
 
-### 1) Project Kickoff and Architecture
+Build a full-stack Tic-Tac-Toe application with:
+- Two play modes: two-player and player-vs-computer.
+- Server-owned rules for move validation and game result.
+- Move history and scoreboard persistence.
+- Realtime updates so UI stays synchronized.
+- Clean, responsive frontend with stable behavior on refresh.
 
-**Me:** I want to build a full-stack Tic-Tac-Toe app from scratch. I need two modes: two-player and player-vs-computer.
+## Prompt and Discussion Timeline
 
-**You:** Good starting point. Let us split responsibilities clearly:
-- Backend should own rules, move validation, winner detection, draw detection, undo behavior, and scoreboard updates.
-- Frontend should focus on user interaction and rendering the latest state from backend.
-- Realtime updates should come from a push channel so state changes appear quickly.
+### Prompt 1: Convert requirement to implementation plan
 
-**Me:** What stack should we use?
+Asked for a clear technical plan before coding:
+- How to split backend and frontend responsibilities.
+- Which stack to use and why.
+- What data model and endpoints are required.
 
-**You:** Use:
-- ASP.NET Core Web API for game endpoints.
-- SQLite + EF Core for persistence.
-- SignalR for realtime updates.
-- Angular standalone app for frontend.
+Discussion outcome:
+- Backend selected as source of truth for rules and outcomes.
+- Angular frontend selected as rendering/action layer.
+- SQLite selected for local persistence.
+- SignalR selected for push updates after state changes.
 
-**Me:** Why this architecture?
+### Prompt 2: Define architecture and design patterns
 
-**You:** Because it keeps business logic centralized, avoids frontend/backend drift, and supports future extension (multiplayer rooms, audit history, analytics).
+Asked to structure backend and frontend in maintainable layers.
 
-### 2) Design Pattern Discussion
-
-**Me:** Which design approach are we following?
-
-**You:** Practical layered design:
+Discussion points:
 - Controller layer for HTTP orchestration.
 - Rules engine service for game logic.
-- Data layer with EF Core context and models.
+- EF Core data layer for sessions, moves, and scoreboard.
 - DTOs for API contracts.
-- Frontend services for API and realtime communication.
-
-**Me:** Why not put logic directly in controller?
-
-**You:** Rules change over time. Keeping logic in a separate engine makes it testable, cleaner, and easier to reason about.
-
-**Me:** What patterns are we applying in frontend?
-
-**You:** Service-oriented UI state flow:
-- Game service for REST actions.
-- Realtime service for SignalR connection and events.
-- Component as presentation and user action handler.
-
-### 3) Requirement to Spec Conversion
-
-**Me:** Convert my requirement into a clean spec before coding.
-
-**You:** Final spec:
-1. Start game in selected mode.
-2. Make move only on empty cells.
-3. Detect win (rows, columns, diagonals).
-4. Detect draw when board is full and no winner.
-5. In computer mode, computer responds after player move.
-6. Undo support:
-	- Two-player: remove last move.
-	- Computer mode: remove last two moves.
-7. Reset game board while keeping scoreboard.
-8. Track move history table with move number, player, row, column.
-9. Track scoreboard (X wins, O wins, draws).
-10. Reset scoreboard separately.
-11. Keep frontend state in sync after refresh/reload.
-12. Push latest state to clients through SignalR.
-
-### 4) Backend Build Prompts
-
-**Me:** Build backend endpoints for session creation, moves, undo, reset board, read scoreboard, and reset scoreboard.
-
-**You:** We will create and wire:
-- Games controller with create/get/move/undo/reset endpoints.
-- Scoreboard endpoints.
-- Rules engine for board reconstruction and evaluations.
-- Hub broadcasting after state changes.
-
-**Me:** How do we model persistent entities?
-
-**You:** Use game session, move log, and scoreboard tables. Store mode, status, winner, current turn, timestamps, and move sequence.
-
-### 5) Logic Discussion (Win, Draw, Computer, Undo, Reset, History, Scoreboard)
-
-**Me:** Explain winner logic clearly.
-
-**You:** Build board from move history and check 8 lines:
-- 3 rows
-- 3 columns
-- 2 diagonals
-If all 3 cells in any line have same symbol, set winner and winning cells.
-
-**Me:** Draw logic?
-
-**You:** If no winner and board has 9 moves, set draw.
-
-**Me:** Computer mode logic?
-
-**You:** Priority strategy:
-1. Play winning move if available.
-2. Block opponent winning move.
-3. Take center.
-4. Take a corner.
-5. Take any remaining cell.
-
-**Me:** Undo logic details?
-
-**You:**
-- Two-player: pop one move.
-- Against computer: pop two moves so player retries whole turn.
-- Do not allow invalid undo transitions.
-
-**Me:** Reset game logic?
-
-**You:** Clear move history for that session, reset status and current turn, keep scoreboard unchanged.
-
-**Me:** Move history table logic?
-
-**You:** Persist every valid move with sequence and coordinates, return sorted list to frontend for display.
-
-**Me:** Scoreboard and reset scoreboard logic?
-
-**You:**
-- Increment only when a game reaches terminal status (X win, O win, draw).
-- Reset scoreboard endpoint sets all counters to zero.
-- Undo after game end should not silently corrupt historical score events.
-
-**Me:** Refresh and reload behavior?
-
-**You:** On load, frontend should hydrate from backend session state immediately and avoid temporary mismatched UI states.
-
-### 6) Why SignalR Discussion
-
-**Me:** Why do we need SignalR here? REST is already present.
-
-**You:** REST handles commands and fetches; SignalR handles push updates. Benefits:
-- Immediate state sync after move/undo/reset.
-- Better responsiveness than polling.
-- Scales to spectators or multi-client game room scenarios.
-- Cleaner model: backend emits single source-of-truth updates.
-
-**Me:** Any important setup notes?
-
-**You:**
-- Configure CORS for frontend origin and credentials.
-- Support transport fallback in client configuration.
-- Join per-game groups to broadcast only relevant state.
-
-### 7) Frontend Build Prompts
-
-**Me:** Build Angular pages with landing and game board. Keep mode selection clear and mobile friendly.
-
-**You:** We will include:
-- Landing screen with mode selection and start action.
-- Game board with 3x3 cells, status panel, controls.
-- Move history and scoreboard sections.
-- Disabled controls during server actions.
-
-**Me:** Make route behavior stable after refresh.
-
-**You:** We will enforce deterministic startup flow and state hydration to avoid flicker or wrong initial panel.
-
-### 8) CSS Iteration Journey (Real Struggle and Final Direction)
-
-**Me:** First version looks plain. Need better styling.
-
-**You:** Add structure and visual hierarchy first: cards, spacing, board focus, clear action buttons.
-
-**Me:** Still feels off. Colors clash, buttons look generic.
-
-**You:** We refine theme tokens, improve contrast, align typography, and simplify button palette by intent (primary, warning, danger, neutral).
-
-**Me:** Now the board is okay, but result popup timing hides winning cells too fast.
-
-**You:** Delay result overlay slightly so winning pattern remains visible before modal appears.
-
-**Me:** Layout still breaks in some widths.
-
-**You:** Rework responsive breakpoints, tighten grid behavior, and rebalance panel widths.
-
-**Me:** We changed CSS many times and overwrote sections repeatedly.
-
-**You:** Final approach: stabilize baseline styles, then only do small targeted edits to prevent drift.
-
-### 9) Testing and Reliability Prompts
-
-**Me:** Strengthen tests and fix failures before finalizing.
-
-**You:** Actions discussed:
-- Expand backend rule tests for board reconstruction and outcomes.
-- Fix frontend spec imports and runtime test setup issues.
-- Add required testbed providers for current Angular test mode.
-- Remove duplicate/obsolete test files causing collisions.
-
-**Me:** Ensure configuration warnings are handled too.
-
-**You:** Update TypeScript config root directory settings to avoid noisy diagnostics and keep tooling stable.
-
-### 10) What Was Suggested vs What Was Manually Changed
-
-This section is for review conversation.
-
-**Suggested during prompting:**
-- High-level architecture split.
-- Endpoint surface and DTO contract shapes.
-- Rules-engine extraction and line-check strategy.
-- SignalR connection and broadcast model.
-- Test expansion areas and failure triage order.
-- CSS direction and iteration checkpoints.
-
-**Changed manually during implementation and review:**
-- Final naming, structure, and exact flow in several files.
-- UX details around loading, turn indication, and end-state timing.
-- Specific CSS values, spacing, colors, and button styles over multiple passes.
-- Test expectations and setup adjustments while resolving real failures.
-
-**Reviewed carefully before keeping changes:**
-- Winner and draw transitions.
-- Computer move safety and priority behavior.
-- Undo behavior per mode.
-- Scoreboard increment and reset behavior.
-- Route reload stability and state hydration.
-- Realtime update reliability and fallback behavior.
-
-### 11) Assumptions and Trade-Offs
-
-**Assumptions:**
-- Single active game session is acceptable for demo flow.
-- Local SQLite persistence is sufficient for evaluation.
-- Backend remains authoritative for all game outcomes.
-
-**Trade-offs chosen:**
-- Simpler deterministic computer strategy instead of deep minimax search.
-- Clear maintainability over premature optimization.
-- Fast local setup over distributed production complexity.
-
-### 12) Final Ownership Statement (For Submission)
-
-This submission reflects practical engineering judgment. Prompting helped accelerate drafting and exploration, but final behavior, correctness checks, manual edits, and acceptance decisions were made through direct implementation review and iterative testing.
-
----
-
-## Reusable Prompt Set (If Rebuilding Again)
-
-1. "Create a full-stack Tic-Tac-Toe app with .NET API, Angular frontend, SQLite persistence, and realtime push updates."
-2. "Keep backend as source of truth for game rules, winner/draw checks, and scoreboard state."
-3. "Implement two modes: two-player and computer, with clear undo behavior for each mode."
-4. "Add move history table and scoreboard endpoints with reset support."
-5. "Broadcast latest game state after each command so frontend remains synchronized."
-6. "Design responsive UI with clear action hierarchy and visible state transitions."
-7. "Refine CSS iteratively based on readability, contrast, and mobile layout behavior."
-8. "Expand backend and frontend tests, fix failures, and keep runtime/tooling diagnostics clean."
+- Frontend services for REST and realtime.
+
+Why this was chosen:
+- Easier testing of game logic.
+- Clear separation between behavior and presentation.
+- Lower risk of frontend/backend rule drift.
+
+### Prompt 3: Define complete game specification
+
+Asked to finalize exact behavior before implementation:
+1. Start game with selected mode.
+2. Allow moves only on empty cells.
+3. Detect wins for rows, columns, diagonals.
+4. Detect draw when board is full without winner.
+5. Trigger computer response in computer mode.
+6. Support undo by mode.
+7. Support reset game without wiping scoreboard.
+8. Track move history with sequence and coordinates.
+9. Track scoreboard counters for X, O, draw.
+10. Support reset scoreboard action.
+11. Ensure refresh/reload hydrates current state correctly.
+12. Broadcast every meaningful state change.
+
+### Prompt 4: Build backend APIs and models
+
+Asked to implement core endpoints and persistence.
+
+Discussion points:
+- Create game session endpoint.
+- Move endpoint with validation.
+- Undo endpoint with mode-based rules.
+- Reset board endpoint.
+- Scoreboard read/reset endpoints.
+- State mapping response for frontend rendering.
+
+Important alignment done here:
+- Terminal states update scoreboard once.
+- Move history persisted in order.
+- Invalid operations rejected cleanly.
+
+### Prompt 5: Win logic, draw logic, and computer mode logic
+
+Asked for explicit rule reasoning and edge-case handling.
+
+Discussion outcomes:
+- Board reconstructed from move history.
+- Winner check over 8 lines: 3 rows, 3 columns, 2 diagonals.
+- Draw check only when no winner and board full.
+- Computer strategy prioritized as:
+	1. Finish winning move.
+	2. Block opponent winning move.
+	3. Take center.
+	4. Take corner.
+	5. Take remaining cell.
+
+### Prompt 6: Undo, reset, move history, scoreboard logic
+
+Asked to define non-ambiguous behavior for action buttons.
+
+Discussion outcomes:
+- Two-player undo removes one move.
+- Computer mode undo removes player+computer pair.
+- Reset game clears current board state but preserves scoreboard.
+- Move history table shows ordered turn details.
+- Scoreboard reset is explicit and separate from board reset.
+
+### Prompt 7: Why SignalR is needed here
+
+Asked whether REST alone is enough.
+
+Discussion outcomes:
+- REST used for commands and state fetch.
+- SignalR used for immediate push synchronization.
+- Better UX than polling.
+- Better fit for multi-client and spectator-ready behavior.
+
+Implementation considerations discussed:
+- CORS configured for frontend origin and credentials.
+- SignalR transport fallback enabled for environment compatibility.
+- Per-game broadcast grouping for targeted updates.
+
+### Prompt 8: Frontend behavior and reload stability
+
+Asked to eliminate transient wrong states and flicker during startup.
+
+Discussion outcomes:
+- Deterministic startup sequence established.
+- Immediate hydration from backend session state.
+- Busy/disabled action handling improved.
+- End-of-game result timing adjusted so winning cells are visible before overlay.
+
+### Prompt 9: CSS direction and iteration struggle
+
+Asked multiple times to improve look and usability.
+
+How the iterations happened:
+- First pass improved structure but felt generic.
+- Next pass improved contrast and spacing but button hierarchy was weak.
+- Another pass tuned board prominence and panel balance.
+- Responsive breakpoints were reworked after layout issues.
+- Final pass stabilized theme values and avoided broad rewrites.
+
+Final CSS approach:
+- Clear visual hierarchy.
+- Consistent spacing and rounded card surfaces.
+- Distinct action button intent.
+- Better mobile behavior and readability.
+
+### Prompt 10: Testing, failures, and cleanup
+
+Asked to make test runs reliable and remove noise.
+
+Discussion outcomes:
+- Frontend spec setup issues resolved (imports and test providers).
+- Duplicate backend test class collision removed.
+- TypeScript config warnings reduced by rootDir alignment.
+- Backend and frontend tests aligned to actual behavior.
+
+## Prompt Summary for Review
+
+### What was requested through prompts
+
+- Architecture choices and responsibility split.
+- API surface and data contract direction.
+- Rule-engine logic and edge-case flow.
+- Realtime strategy and connection setup.
+- UX refinements for startup, status, and end-game behavior.
+- CSS iteration goals and acceptance criteria.
+- Test stabilization and diagnostics cleanup.
+
+### What was manually refined during coding
+
+- Exact endpoint behavior and validation details.
+- Final interaction timing and UI state transitions.
+- CSS values, spacing, and responsive tuning.
+- Test expectations and final pass/fail corrections.
+
+### What was reviewed carefully
+
+- Winner/draw correctness.
+- Computer strategy behavior.
+- Mode-specific undo behavior.
+- Scoreboard consistency.
+- Realtime synchronization reliability.
+- Refresh/reload consistency.
+
+## Clarifications, Assumptions, and Trade-Offs
+
+Clarifications and assumptions:
+- 3x3 board only.
+- X starts first.
+- Backend remains authoritative for outcomes.
+- Local SQLite persistence is acceptable for demo scope.
+
+Trade-offs chosen:
+- Deterministic computer logic over deep minimax for simplicity.
+- Simpler local runtime setup over production deployment complexity.
+- Fast iteration on CSS with later stabilization pass.
+
+## Reusable Prompt List
+
+1. Build a full-stack Tic-Tac-Toe app with .NET API, Angular frontend, SQLite persistence, and realtime updates.
+2. Keep backend as source of truth for move validation, win/draw logic, and scoreboard updates.
+3. Implement two-player and computer modes with clear undo behavior for each mode.
+4. Add move history and scoreboard endpoints, including scoreboard reset.
+5. Push game state updates after every move/undo/reset so frontend stays synchronized.
+6. Improve startup/reload behavior to prevent flicker and temporary incorrect state.
+7. Iterate CSS until board readability, action hierarchy, and responsive layout are strong.
+8. Expand tests and fix setup failures so both backend and frontend suites are stable.
