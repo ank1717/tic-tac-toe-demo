@@ -1,16 +1,24 @@
 import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { LiveStreamService } from './live-stream';
 
-import { LiveStream } from './live-stream';
-
-describe('LiveStream', () => {
-  let service: LiveStream;
+describe('LiveStreamService', () => {
+  let service: LiveStreamService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(LiveStream);
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()]
+    });
+    service = TestBed.inject(LiveStreamService);
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('listenToStateStream returns an observable', () => {
+    const stream = service.listenToStateStream();
+    expect(stream).toBeDefined();
+    expect(typeof stream.subscribe).toBe('function');
   });
 });
