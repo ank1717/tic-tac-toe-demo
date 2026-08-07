@@ -67,6 +67,7 @@ export class GameBoardComponent implements OnInit {
     this.showResult = false;
     this.gameService.createNewSession(this.activeMode).subscribe({
       next: (res) => {
+        this.syncModeInUrl(this.activeMode);
         this.liveStream.bindToSessionGroup(res.gameId);
         this.applyState(res);
         this.autoStarting = false;
@@ -98,6 +99,7 @@ export class GameBoardComponent implements OnInit {
     // Create a new session with the selected mode (ends current match view)
     this.gameService.createNewSession(this.activeMode).subscribe({
       next: (res) => {
+        this.syncModeInUrl(this.activeMode);
         this.liveStream.bindToSessionGroup(res.gameId);
         this.applyState(res);
         this.isBusy = false;
@@ -194,6 +196,7 @@ export class GameBoardComponent implements OnInit {
 
   private applyState(nextState: GameStateResponse): void {
     this.state = nextState;
+    this.activeMode = nextState.gameMode;
     this.cells = Array.from(nextState.boardState);
     if (nextState.gameStatus !== 'InProgress') {
       setTimeout(() => {
@@ -203,5 +206,12 @@ export class GameBoardComponent implements OnInit {
     } else {
       this.showResult = false;
     }
+  }
+
+  private syncModeInUrl(mode: string): void {
+    this.router.navigate(['/game'], {
+      queryParams: { mode },
+      replaceUrl: true
+    });
   }
 }
